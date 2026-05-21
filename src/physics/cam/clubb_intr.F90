@@ -31,6 +31,8 @@ module clubb_intr
   use ref_pres,            only: top_lev => trop_cloud_top_lev
   use scamMOD,             only: single_column, scm_clubb_iop_name, scm_cambfb_mode
 
+  use advance_xp2_xpyp_module, only: &
+      setup_C14_ML_xp2_xpyp   !------------------------------------------ Procedure(s)
 #ifdef CLUBB_SGS
   use clubb_api_module,    only: pdf_parameter, implicit_coefs_terms, &
                                  clubb_config_flags_type, grid, stats, &
@@ -755,7 +757,7 @@ end subroutine clubb_init_cnst
     use units,           only: getunit, freeunit
     use cam_abortutils,  only: endrun
     use spmd_utils,      only: mpicom, mstrid=>masterprocid, mpi_logical, mpi_real8, &
-                               mpi_integer
+                               mpi_integer, mpi_character
     use clubb_mf,        only: clubb_mf_readnl
 
     use clubb_api_module, only: &
@@ -773,6 +775,9 @@ end subroutine clubb_init_cnst
     logical :: clubb_cloudtop_cooling = .false., clubb_rainevap_turb = .false.
 
     integer :: iunit, read_status, ierr
+
+    logical :: clubb_l_c14_ml
+    character(len=100) :: clubb_c14_ml_net_filepath
 
     namelist /clubb_his_nl/ clubb_history, clubb_rad_history
     namelist /clubbpbl_diff_nl/ clubb_cloudtop_cooling, clubb_rainevap_turb, &
@@ -899,7 +904,9 @@ end subroutine clubb_init_cnst
          clubb_up2_sfc_coef, &
          clubb_wpxp_L_thresh, &
          clubb_wpxp_Ri_exp, &
-         clubb_z_displace
+         clubb_z_displace, &
+         clubb_l_c14_ml, &
+         clubb_c14_ml_net_filepath
 
     !----- Begin Code -----
 
@@ -978,7 +985,9 @@ end subroutine clubb_init_cnst
                                              clubb_l_mono_flux_lim_spikefix, &  ! Out
                                              clubb_l_host_applies_sfc_fluxes, & ! Out
                                              clubb_l_wp2_fill_holes_tke, & ! Out
-                                             clubb_l_add_dycore_grid ) ! Out
+                                             clubb_l_add_dycore_grid, & ! Out
+                                             clubb_l_c14_ml, & ! Out
+                                             clubb_c14_ml_net_filepath) ! Out
 
     !  Call CLUBB+MF namelist
     call clubb_mf_readnl(nlfile)
@@ -1374,62 +1383,64 @@ end subroutine clubb_init_cnst
                                                  clubb_l_use_precip_frac, &                 ! In
                                                  clubb_l_predict_upwp_vpwp, &               ! In
                                                  clubb_l_ho_nontrad_coriolis, &             ! In
-                                                 clubb_l_ho_trad_coriolis, &                ! In
-                                                 clubb_l_min_wp2_from_corr_wx, &            ! In
-                                                 clubb_l_min_xp2_from_corr_wx, &            ! In
-                                                 clubb_l_C2_cloud_frac, &                   ! In
-                                                 clubb_l_diffuse_rtm_and_thlm, &            ! In
-                                                 clubb_l_stability_correct_Kh_N2_zm, &      ! In
-                                                 clubb_l_calc_thlp2_rad, &                  ! In
-                                                 clubb_l_upwind_xpyp_ta, &                  ! In
-                                                 clubb_l_upwind_xm_ma, &                    ! In
-                                                 clubb_l_uv_nudge, &                        ! In
-                                                 clubb_l_rtm_nudge, &                       ! In
-                                                 clubb_l_tke_aniso, &                       ! In
-                                                 clubb_l_vert_avg_closure, &                ! In
-                                                 clubb_l_trapezoidal_rule_zt, &             ! In
-                                                 clubb_l_trapezoidal_rule_zm, &             ! In
-                                                 clubb_l_call_pdf_closure_twice, &          ! In
-                                                 clubb_l_standard_term_ta, &                ! In
-                                                 clubb_l_partial_upwind_wp3, &              ! In
-                                                 clubb_l_godunov_upwind_wpxp_ta, &          ! In
-                                                 clubb_l_godunov_upwind_xpyp_ta, &          ! In
-                                                 clubb_l_use_cloud_cover, &                 ! In
-                                                 clubb_l_diagnose_correlations, &           ! In
-                                                 clubb_l_calc_w_corr, &                     ! In
-                                                 clubb_l_const_Nc_in_cloud, &               ! In
-                                                 clubb_l_fix_w_chi_eta_correlations, &      ! In
-                                                 clubb_l_stability_correct_tau_zm, &        ! In
-                                                 clubb_l_damp_wp2_using_em, &               ! In
-                                                 clubb_l_do_expldiff_rtm_thlm, &            ! In
-                                                 clubb_l_Lscale_plume_centered, &           ! In
-                                                 clubb_l_diag_Lscale_from_tau, &            ! In
-                                                 clubb_l_use_C7_Richardson, &               ! In
-                                                 clubb_l_use_C11_Richardson, &              ! In
-                                                 clubb_l_use_shear_Richardson, &            ! In
-                                                 clubb_l_brunt_vaisala_freq_moist, &        ! In
-                                                 clubb_l_use_thvm_in_bv_freq, &             ! In
-                                                 clubb_l_rcm_supersat_adj, &                ! In
-                                                 clubb_l_damp_wp3_Skw_squared, &            ! In
-                                                 clubb_l_prescribed_avg_deltaz, &           ! In
-                                                 clubb_l_lmm_stepping, &                    ! In
-                                                 clubb_l_e3sm_config, &                     ! In
-                                                 clubb_l_vary_convect_depth, &              ! In
-                                                 clubb_l_use_tke_in_wp3_pr_turb_term, &     ! In
-                                                 clubb_l_use_tke_in_wp2_wp3_K_dfsn, &       ! In
-                                                 clubb_l_use_wp3_lim_with_smth_Heaviside, & ! In
-                                                 clubb_l_smooth_Heaviside_tau_wpxp, &       ! In
-                                                 clubb_l_modify_limiters_for_cnvg_test, &   ! In
-                                                 clubb_l_enable_relaxed_clipping, &         ! In
-                                                 clubb_l_linearize_pbl_winds, &             ! In
-                                                 clubb_l_mono_flux_lim_thlm, &              ! In
-                                                 clubb_l_mono_flux_lim_rtm, &               ! In
-                                                 clubb_l_mono_flux_lim_um, &                ! In
-                                                 clubb_l_mono_flux_lim_vm, &                ! In
-                                                 clubb_l_mono_flux_lim_spikefix, &          ! In
-                                                 clubb_l_host_applies_sfc_fluxes, &         ! In
-                                                 clubb_l_wp2_fill_holes_tke, &              ! In
-                                                 clubb_l_add_dycore_grid, &                 ! In
+                                                 clubb_l_ho_trad_coriolis, &                ! In             
+                                                 clubb_l_min_wp2_from_corr_wx, &            ! In                    
+                                                 clubb_l_min_xp2_from_corr_wx, &            ! In                    
+                                                 clubb_l_C2_cloud_frac, &                   ! In            
+                                                 clubb_l_diffuse_rtm_and_thlm, &            ! In                    
+                                                 clubb_l_stability_correct_Kh_N2_zm, &      ! In                          
+                                                 clubb_l_calc_thlp2_rad, &                  ! In              
+                                                 clubb_l_upwind_xpyp_ta, &                  ! In              
+                                                 clubb_l_upwind_xm_ma, &                    ! In            
+                                                 clubb_l_uv_nudge, &                        ! In        
+                                                 clubb_l_rtm_nudge, &                       ! In        
+                                                 clubb_l_tke_aniso, &                       ! In        
+                                                 clubb_l_vert_avg_closure, &                ! In                
+                                                 clubb_l_trapezoidal_rule_zt, &             ! In                  
+                                                 clubb_l_trapezoidal_rule_zm, &             ! In                  
+                                                 clubb_l_call_pdf_closure_twice, &          ! In                      
+                                                 clubb_l_standard_term_ta, &                ! In                
+                                                 clubb_l_partial_upwind_wp3, &              ! In                  
+                                                 clubb_l_godunov_upwind_wpxp_ta, &          ! In                      
+                                                 clubb_l_godunov_upwind_xpyp_ta, &          ! In                      
+                                                 clubb_l_use_cloud_cover, &                 ! In              
+                                                 clubb_l_diagnose_correlations, &           ! In                    
+                                                 clubb_l_calc_w_corr, &                     ! In          
+                                                 clubb_l_const_Nc_in_cloud, &               ! In                
+                                                 clubb_l_fix_w_chi_eta_correlations, &      ! In                          
+                                                 clubb_l_stability_correct_tau_zm, &        ! In                        
+                                                 clubb_l_damp_wp2_using_em, &               ! In                
+                                                 clubb_l_do_expldiff_rtm_thlm, &            ! In                    
+                                                 clubb_l_Lscale_plume_centered, &           ! In                    
+                                                 clubb_l_diag_Lscale_from_tau, &            ! In                    
+                                                 clubb_l_use_C7_Richardson, &               ! In                
+                                                 clubb_l_use_C11_Richardson, &              ! In                  
+                                                 clubb_l_use_shear_Richardson, &            ! In                    
+                                                 clubb_l_brunt_vaisala_freq_moist, &        ! In                        
+                                                 clubb_l_use_thvm_in_bv_freq, &             ! In                  
+                                                 clubb_l_rcm_supersat_adj, &                ! In                
+                                                 clubb_l_damp_wp3_Skw_squared, &            ! In                    
+                                                 clubb_l_prescribed_avg_deltaz, &           ! In                    
+                                                 clubb_l_lmm_stepping, &                    ! In            
+                                                 clubb_l_e3sm_config, &                     ! In          
+                                                 clubb_l_vary_convect_depth, &              ! In                  
+                                                 clubb_l_use_tke_in_wp3_pr_turb_term, &     ! In                          
+                                                 clubb_l_use_tke_in_wp2_wp3_K_dfsn, &       ! In                        
+                                                 clubb_l_use_wp3_lim_with_smth_Heaviside, & ! In                              
+                                                 clubb_l_smooth_Heaviside_tau_wpxp, &       ! In                        
+                                                 clubb_l_modify_limiters_for_cnvg_test, &   ! In                            
+                                                 clubb_l_enable_relaxed_clipping, &         ! In                      
+                                                 clubb_l_linearize_pbl_winds, &             ! In                  
+                                                 clubb_l_mono_flux_lim_thlm, &              ! In                  
+                                                 clubb_l_mono_flux_lim_rtm, &               ! In                
+                                                 clubb_l_mono_flux_lim_um, &                ! In                
+                                                 clubb_l_mono_flux_lim_vm, &                ! In                
+                                                 clubb_l_mono_flux_lim_spikefix, &          ! In                      
+                                                 clubb_l_host_applies_sfc_fluxes, &         ! In                      
+                                                 clubb_l_wp2_fill_holes_tke, &              ! In                  
+                                                 clubb_l_add_dycore_grid, & 
+                                                 clubb_l_c14_ml, &
+                                                 clubb_c14_ml_net_filepath, &                ! In              
                                                  clubb_config_flags )                       ! Out
 
 #endif
@@ -2042,6 +2053,10 @@ end subroutine clubb_init_cnst
 
     ! The following is physpkg, so it needs to be initialized every time
     call pbuf_set_field(pbuf_ini, fice_idx,    0.0_r8)
+
+    if ( clubb_config_flags%l_c14_ml ) then
+      call setup_C14_ML_xp2_xpyp( clubb_config_flags%c14_ml_net_filepath )
+    end if
 
     ! --------------- !
     ! End             !
