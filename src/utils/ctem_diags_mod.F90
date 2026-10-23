@@ -96,14 +96,15 @@ contains
     integer(iMap),       pointer :: coord_map(:) => null()
     type(horiz_coord_t), pointer :: lon_coord
     type(horiz_coord_t), pointer :: lat_coord
-    integer :: i, j, ind, astat
+    integer :: i, j, ind, astat, ctem_diags_numlons
 
     character(len=*), parameter :: subname = 'ctem_diags_reg: '
 
     if (.not.ctem_diags_active) return
 
     ! initialize grids and mapping
-    call esmf_lonlat_grid_init(ctem_diags_numlats)
+    ctem_diags_numlons = 2 * ctem_diags_numlons                         ! this was previously hardcoded within esmf_lonlat_grid_init
+    call esmf_lonlat_grid_init(ctem_diags_numlats, ctem_diags_numlons)
     call esmf_phys_mesh_init()
     call esmf_phys2lonlat_init()
 
