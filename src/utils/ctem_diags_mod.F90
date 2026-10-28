@@ -103,7 +103,7 @@ contains
     if (.not.ctem_diags_active) return
 
     ! initialize grids and mapping
-    ctem_diags_numlons = 2 * ctem_diags_numlons                         ! this was previously hardcoded within esmf_lonlat_grid_init
+    ctem_diags_numlons = 2 * ctem_diags_numlats                         ! this was previously hardcoded within esmf_lonlat_grid_init
     call esmf_lonlat_grid_init(ctem_diags_numlats, ctem_diags_numlons)
     call esmf_phys_mesh_init()
     call esmf_phys2lonlat_init()
