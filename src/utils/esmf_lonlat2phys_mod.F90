@@ -25,8 +25,6 @@ module esmf_lonlat2phys_mod
   public :: esmf_lonlat2phys_init
   public :: esmf_lonlat2phys_regrid
   public :: esmf_lonlat2phys_destroy
-  public :: fields_bundle_t
-  public :: n_flx_flds
 
   type(ESMF_RouteHandle) :: rh_lonlat2phys_3d
 
@@ -37,19 +35,15 @@ module esmf_lonlat2phys_mod
      module procedure esmf_lonlat2phys_regrid_3d
   end interface esmf_lonlat2phys_regrid
 
-  type :: fields_bundle_t
-     real(r8), pointer :: fld(:,:,:) => null()
-  end type fields_bundle_t
-
-  integer, parameter :: n_flx_flds = 2 ! 3D uflux and vflux
-
 contains
 
   !------------------------------------------------------------------------------
   !------------------------------------------------------------------------------
-  subroutine esmf_lonlat2phys_init()
+  subroutine esmf_lonlat2phys_init(nflds)
     use esmf_phys_mesh_mod, only: physics_grid_mesh
     use esmf_lonlat_grid_mod, only: lonlat_grid
+
+    integer, intent(in) :: nflds
 
     type(ESMF_ArraySpec) :: arrayspec
     integer(ESMF_KIND_I4), pointer :: factorIndexList(:,:)
@@ -69,7 +63,7 @@ contains
 
     physfld_3d = ESMF_FieldCreate(physics_grid_mesh, arrayspec, &
                                   gridToFieldMap=(/3/), meshloc=ESMF_MESHLOC_ELEMENT, &
-                                  ungriddedLBound=(/1,1/), ungriddedUBound=(/pver,n_flx_flds/), rc=rc)
+                                  ungriddedLBound=(/1,1/), ungriddedUBound=(/pver,nflds/), rc=rc)
     call check_esmf_error(rc, subname//'ESMF_FieldCreate 3D phys fld ERROR')
 
     ! 3D lon lat grid
@@ -77,7 +71,7 @@ contains
     call check_esmf_error(rc, subname//'ESMF_ArraySpecSet 3D lonlat fld ERROR')
 
     lonlatfld_3d = ESMF_FieldCreate( lonlat_grid, arrayspec, staggerloc=ESMF_STAGGERLOC_CENTER, &
-                                     ungriddedLBound=(/1,1/), ungriddedUBound=(/pver,n_flx_flds/), rc=rc)
+                                     ungriddedLBound=(/1,1/), ungriddedUBound=(/pver,nflds/), rc=rc)
     call check_esmf_error(rc, subname//'ESMF_FieldCreate 3D lonlat fld ERROR')
 
     call ESMF_FieldRegridStore(srcField=lonlatfld_3d, dstField=physfld_3d, &
@@ -95,23 +89,26 @@ contains
   !------------------------------------------------------------------------------
   subroutine esmf_lonlat2phys_regrid_3d(lonlatflds, physflds)
     use esmf_lonlat_grid_mod, only: lon_beg,lon_end,lat_beg,lat_end
+    use esmf_fields_bundle_mod, only: fields_bundle_t
     use ppgrid, only: pcols, pver, begchunk, endchunk
     use phys_grid, only: get_ncols_p
 
-    type(fields_bundle_t), intent(in) :: lonlatflds(n_flx_flds)
-    type(fields_bundle_t), intent(inout) :: physflds(n_flx_flds)
+    type(fields_bundle_t), intent(in) :: lonlatflds(:)
+    type(fields_bundle_t), intent(inout) :: physflds(:)
 
-    integer :: i, ichnk, ncol, ifld, ilev, icol, rc
+    integer :: i, ichnk, ncol, ifld, ilev, icol, rc, nflds
     real(ESMF_KIND_R8), pointer :: physptr(:,:,:)
     real(ESMF_KIND_R8), pointer :: lonlatptr(:,:,:,:)
 
     character(len=*), parameter :: subname = 'esmf_lonlat2phys_regrid_3d: '
 
+    nflds = size(lonlatflds)
+
     ! set values of lonlatfld_3d ESMF field
     call ESMF_FieldGet(lonlatfld_3d, localDe=0, farrayPtr=lonlatptr, rc=rc)
     call check_esmf_error(rc, subname//'ESMF_FieldGet lonlatptr')
 
-    do ifld = 1,n_flx_flds
+    do ifld = 1,nflds
        lonlatptr(lon_beg:lon_end,lat_beg:lat_end,1:pver,ifld) = lonlatflds(ifld)%fld(lon_beg:lon_end,lat_beg:lat_end,1:pver)
     end do
 
@@ -129,7 +126,7 @@ contains
        ncol = get_ncols_p(ichnk)
        do icol = 1,ncol
           i = i+1
-          do ifld = 1,n_flx_flds
+          do ifld = 1,nflds
              do ilev = 1,pver
                 physflds(ifld)%fld(ilev,icol,ichnk) = physptr(ilev,ifld,i)
              end do

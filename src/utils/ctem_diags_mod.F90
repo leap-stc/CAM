@@ -32,6 +32,7 @@ module ctem_diags_mod
 
   integer :: ctem_diags_numlats = 0
   logical :: ctem_diags_active = .false.
+  integer, parameter :: nflds = 8
 
 contains
 
@@ -106,7 +107,7 @@ contains
     ctem_diags_numlons = 2 * ctem_diags_numlats                         ! this was previously hardcoded within esmf_lonlat_grid_init
     call esmf_lonlat_grid_init(ctem_diags_numlats, ctem_diags_numlons)
     call esmf_phys_mesh_init()
-    call esmf_phys2lonlat_init()
+    call esmf_phys2lonlat_init(nflds)
 
     ! Zonal mean grid for history fields
     zmlons = 0._r8
@@ -234,7 +235,7 @@ contains
     use esmf_phys2lonlat_mod, only: esmf_phys2lonlat_regrid
     use esmf_zonal_mean_mod, only: esmf_zonal_mean_calc, esmf_zonal_mean_wsums, esmf_zonal_mean_masked
     use interpolate_data, only: lininterp
-    use esmf_phys2lonlat_mod, only: fields_bundle_t, nflds
+    use esmf_fields_bundle_mod, only: fields_bundle_t
     use air_composition, only: cappav
     use physconst, only: pref
 

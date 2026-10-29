@@ -25,8 +25,6 @@ module esmf_phys2lonlat_mod
   public :: esmf_phys2lonlat_init
   public :: esmf_phys2lonlat_regrid
   public :: esmf_phys2lonlat_destroy
-  public :: fields_bundle_t
-  public :: nflds
 
   type(ESMF_RouteHandle) :: rh_phys2lonlat_3d
   type(ESMF_RouteHandle) :: rh_phys2lonlat_2d
@@ -42,19 +40,16 @@ module esmf_phys2lonlat_mod
      module procedure esmf_phys2lonlat_regrid_3d
   end interface esmf_phys2lonlat_regrid
 
-  type :: fields_bundle_t
-     real(r8), pointer :: fld(:,:,:) => null()
-  end type fields_bundle_t
-
-  integer, parameter :: nflds = 8
-
 contains
 
   !------------------------------------------------------------------------------
   !------------------------------------------------------------------------------
-  subroutine esmf_phys2lonlat_init()
+  subroutine esmf_phys2lonlat_init(nflds)
     use esmf_phys_mesh_mod, only: physics_grid_mesh
     use esmf_lonlat_grid_mod, only: lonlat_grid
+    
+    !! number of fields
+    integer, intent(in) :: nflds
 
     type(ESMF_ArraySpec) :: arrayspec
     integer(ESMF_KIND_I4), pointer :: factorIndexList(:,:)
@@ -124,17 +119,20 @@ contains
   !------------------------------------------------------------------------------
   subroutine esmf_phys2lonlat_regrid_3d(physflds, lonlatflds)
     use esmf_lonlat_grid_mod, only: lon_beg,lon_end,lat_beg,lat_end
+    use esmf_fields_bundle_mod, only: fields_bundle_t
     use ppgrid, only: pcols, pver, begchunk, endchunk
     use phys_grid, only: get_ncols_p
 
-    type(fields_bundle_t), intent(in) :: physflds(nflds)
-    type(fields_bundle_t), intent(inout) :: lonlatflds(nflds)
+    type(fields_bundle_t), intent(in) :: physflds(:)
+    type(fields_bundle_t), intent(inout) :: lonlatflds(:)
 
-    integer :: i, ichnk, ncol, ifld, ilev, icol, rc
+    integer :: i, ichnk, ncol, ifld, ilev, icol, rc, nflds
     real(ESMF_KIND_R8), pointer :: physptr(:,:,:)
     real(ESMF_KIND_R8), pointer :: lonlatptr(:,:,:,:)
 
     character(len=*), parameter :: subname = 'esmf_phys2lonlat_regrid_3d: '
+
+    nflds = size(physflds)
 
     call ESMF_FieldGet(physfld_3d, localDe=0, farrayPtr=physptr, rc=rc)
     call check_esmf_error(rc, subname//'ESMF_FieldGet physptr')
