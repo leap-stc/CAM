@@ -48,8 +48,7 @@ contains
     use esmf_phys_mesh_mod, only: physics_grid_mesh
     use esmf_lonlat_grid_mod, only: lonlat_grid
     
-    !! number of fields
-    integer, intent(in) :: nflds
+    integer, intent(in) :: nflds    !! number of fields passed for regridding
 
     type(ESMF_ArraySpec) :: arrayspec
     integer(ESMF_KIND_I4), pointer :: factorIndexList(:,:)
@@ -119,7 +118,7 @@ contains
   !------------------------------------------------------------------------------
   subroutine esmf_phys2lonlat_regrid_3d(physflds, lonlatflds)
     use esmf_lonlat_grid_mod, only: lon_beg,lon_end,lat_beg,lat_end
-    use esmf_fields_bundle_mod, only: fields_bundle_t
+    use esmf_fields_registry_mod, only: fields_bundle_t
     use ppgrid, only: pcols, pver, begchunk, endchunk
     use phys_grid, only: get_ncols_p
 
