@@ -89,7 +89,7 @@ contains
   !------------------------------------------------------------------------------
   subroutine esmf_lonlat2phys_regrid_3d(lonlatflds, physflds)
     use esmf_lonlat_grid_mod, only: lon_beg,lon_end,lat_beg,lat_end
-    use esmf_fields_bundle_mod, only: fields_bundle_t
+    use esmf_fields_registry_mod, only: fields_bundle_t
     use ppgrid, only: pcols, pver, begchunk, endchunk
     use phys_grid, only: get_ncols_p
 

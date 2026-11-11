@@ -32,7 +32,7 @@ module ctem_diags_mod
 
   integer :: ctem_diags_numlats = 0
   logical :: ctem_diags_active = .false.
-  integer, parameter :: nflds = 8
+  integer, parameter :: nflds = 8         ! number of dynamical fields to remap
 
 contains
 
@@ -103,8 +103,9 @@ contains
 
     if (.not.ctem_diags_active) return
 
+    ! this realationship was previously hardcoded within esmf_lonlat_grid_init
+    ctem_diags_numlons = 2 * ctem_diags_numlats
     ! initialize grids and mapping
-    ctem_diags_numlons = 2 * ctem_diags_numlats                         ! this was previously hardcoded within esmf_lonlat_grid_init
     call esmf_lonlat_grid_init(ctem_diags_numlats, ctem_diags_numlons)
     call esmf_phys_mesh_init()
     call esmf_phys2lonlat_init(nflds)
@@ -235,7 +236,7 @@ contains
     use esmf_phys2lonlat_mod, only: esmf_phys2lonlat_regrid
     use esmf_zonal_mean_mod, only: esmf_zonal_mean_calc, esmf_zonal_mean_wsums, esmf_zonal_mean_masked
     use interpolate_data, only: lininterp
-    use esmf_fields_bundle_mod, only: fields_bundle_t
+    use esmf_fields_registry_mod, only: fields_bundle_t
     use air_composition, only: cappav
     use physconst, only: pref
 
