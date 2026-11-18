@@ -101,12 +101,12 @@
 
 [submodule "clubb"]
 	path = src/physics/clubb
-	url = https://github.com/m2lines/clubb_ML
+	url = https://github.com/leap-stc/clubb_ML
         fxrequired = AlwaysRequired
         fxsparse = ../.clubb_sparse_checkout
-        # The commit-hash below is intended to point to the HEAD of branch
-        # 'clubb_4ncar_with_ml' in the m2lines/clubb_ML repository.
-        fxtag = 54a37d543d1087aba2faf9769d5fc40ac2ab7570
+        # The commit-hash/tag below is intended to point to the HEAD of branch
+        # 'clubb_4mle' in the leap-stc/clubb_ML repository.
+        fxtag = clubb_4mle_20261118_54a37d5
         fxDONOTUSEurl = https://github.com/larson-group/clubb_release
 
 [submodule "ext_co2_cooling"]
